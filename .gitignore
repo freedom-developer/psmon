@@ -1,0 +1,14 @@
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.o
+*.d
+*.order
+*.symvers
+.*.cmd
+.tmp_versions/
+Module.symvers
+modules.order
+userspace/build/
+compile_commands.json
