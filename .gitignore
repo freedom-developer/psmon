@@ -12,3 +12,4 @@ Module.symvers
 modules.order
 userspace/build/
 compile_commands.json
+*.idx
