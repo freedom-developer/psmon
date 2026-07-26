@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+#define pr_fmt(fmt) "psmon: " fmt
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -28,7 +28,8 @@ static int __init psmon_init(void)
 		return -EINVAL;
 	}
 
-	if (!(err = proc_watch_init(psmon_root))) {
+	err = proc_watch_init(psmon_root);
+	if (err) {
 		psmon_exit();
 		return err;
 	}
@@ -45,6 +46,9 @@ static void __exit psmon_exit(void)
 		proc_remove(psmon_root);
 		psmon_root = NULL;
 	}
+
+	proc_watch_exit();
+
 	pr_info("unloaded\n");
 }
 

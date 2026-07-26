@@ -4,7 +4,7 @@
 
 #include <linux/proc_fs.h>
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+// #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 struct proc_dir_entry *psmon_root = NULL;
 #define PSMON_DIR_NAME "psmon"
