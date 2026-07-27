@@ -1,11 +1,15 @@
 #include "pw_internal.h"
 
 #include <linux/seq_file.h>
+#include <linux/sched/cputime.h>
+#include <linux/mm.h>
 
 static int pi_open(struct inode *, struct file *);
 static int pi_show(struct seq_file *, void *);
 static int pi_release(struct inode *, struct file *);
 static const char *task_state_name(char state);
+static const char *pi_policy_name(unsigned int policy);
+static unsigned long pages_to_kib(unsigned long pages);
 
 const struct proc_ops pi_ops = {
     .proc_open = pi_open,
@@ -44,6 +48,8 @@ static int pi_show(struct seq_file *m, void *data)
     u64 now_ns = ktime_get_boottime_ns();
     u64 elapsed_ns = now_ns >= start_ns ? now_ns - start_ns : 0;
     char state = task_state_to_char(tsk);
+    u64 user_tims_ns, system_time_ns, total_time_ns;
+    struct mm_struct *mm;
 
     if (!tsk)
         return -ESRCH;
@@ -80,31 +86,40 @@ static int pi_show(struct seq_file *m, void *data)
     seq_printf(m, "process_group_id: %d\n", task_pgrp_nr(tsk));
     seq_printf(m, "session_id: %d\n", task_session_nr_ns(tsk, &init_pid_ns));
 
+    task_cputime_adjusted(tsk, &user_tims_ns, &system_time_ns);
+    total_time_ns = user_tims_ns + system_time_ns;
     seq_printf(m, "\n[cpu]\n");
-    seq_printf(m, "user_time_ms: \n");
-    seq_printf(m, "system_time_ms: \n");
-    seq_printf(m, "total_time_ms: \n");
+    seq_printf(m, "user_time_ms: %lld\n", user_tims_ns);
+    seq_printf(m, "system_time_ms: %lld\n", system_time_ns);
+    seq_printf(m, "total_time_ms: %lld\n", total_time_ns);
     seq_printf(m, "last_cpu: %d\n", task_cpu(tsk));
-    seq_printf(m, "voluntary_context_switches: \n");
-    seq_printf(m, "nonvoluntary_context_switches: \n");
+    seq_printf(m, "voluntary_context_switches: %ld\n", READ_ONCE(tsk->nvcsw));
+    seq_printf(m, "nonvoluntary_context_switches: %ld\n", READ_ONCE(tsk->nivcsw));
 
     seq_printf(m, "\n[scheduler]\n");
-    seq_printf(m, "policy:\n");
-    seq_printf(m, "policy_id: \n");
-    seq_printf(m, "priority:\n");
-    seq_printf(m, "static_priority:\n");
-    seq_printf(m, "normal_priority:\n");
-    seq_printf(m, "nice:\n");
-    seq_printf(m, "rt_priority:\n");
+    seq_printf(m, "policy_id: %d\n", tsk->policy);
+    seq_printf(m, "policy: %s\n", pi_policy_name(tsk->policy));
+    seq_printf(m, "priority: %d\n", tsk->prio);
+    seq_printf(m, "static_priority: %d\n", tsk->static_prio);
+    seq_printf(m, "normal_priority: %d\n", tsk->normal_prio);
+    seq_printf(m, "rt_priority: %d\n", tsk->rt_priority);
+    seq_printf(m, "nice: %d\n", task_nice(tsk));
 
-    seq_printf(m, "\n[memory]\n");
-    seq_printf(m, "rss_kb:\n");
-    seq_printf(m, "shared_rss_kb: \n");
-    seq_printf(m, "data_kb: \n");
-    seq_printf(m, "stack_kb: \n");
-    seq_printf(m, "code_kb: \n");
-    seq_printf(m, "page_faults_minor: \n");
-    seq_printf(m, "page_faults_major: \n");
+    mm = get_task_mm(tsk);
+    if (mm) {
+        mmap_read_lock(mm);
+        seq_printf(m, "\n[memory]\n");
+        seq_printf(m, "total_vm_kb: %lu\n", pages_to_kib(mm->total_vm));
+        seq_printf(m, "data_vm_kb: %lu\n", pages_to_kib(mm->data_vm));
+        seq_printf(m, "rss_kb: %lu\n", pages_to_kib(get_mm_rss(mm)));
+        seq_printf(m, "shared_rss_kb: %lu\n", pages_to_kib(get_mm_counter(mm, MM_SHMEMPAGES)));
+        seq_printf(m, "data_kb: \n");
+        seq_printf(m, "stack_kb: \n");
+        seq_printf(m, "code_kb: \n");
+        seq_printf(m, "page_faults_minor: \n");
+        seq_printf(m, "page_faults_major: \n");
+        mmap_read_unlock(mm);
+    }
 
     seq_printf(m, "\n[io]\n");
     seq_printf(m, "read_bytes: \n");
@@ -157,4 +172,22 @@ static const char *task_state_name(char state)
     case 'I': return "idle";
     default: return "unknown";
     }
+}
+
+static const char *pi_policy_name(unsigned int policy)
+{
+    switch (policy) {
+    case SCHED_NORMAL: return "normal";
+    case SCHED_FIFO: return "fifo";
+    case SCHED_RR: return "round_robin";
+    case SCHED_BATCH: return "batch";
+    case SCHED_IDLE: return "idle";
+    case SCHED_DEADLINE: return "deadline";
+    default: return "unknown";
+    }
+}
+
+static unsigned long pages_to_kib(unsigned long pages)
+{
+    return pages << (PAGE_SHIFT  - 10);
 }

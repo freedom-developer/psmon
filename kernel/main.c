@@ -34,7 +34,6 @@ static int __init psmon_init(void)
 		return err;
 	}
 
-
 	pr_info("loaded\n");
 	return 0;
 }
