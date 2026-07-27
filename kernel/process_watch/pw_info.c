@@ -5,6 +5,7 @@
 static int pi_open(struct inode *, struct file *);
 static int pi_show(struct seq_file *, void *);
 static int pi_release(struct inode *, struct file *);
+static const char *task_state_name(char state);
 
 const struct proc_ops pi_ops = {
     .proc_open = pi_open,
@@ -36,45 +37,54 @@ static int pi_open(struct inode *inode, struct file *filp)
 static int pi_show(struct seq_file *m, void *data)
 {
     char comm[TASK_COMM_LEN];
-    char state;
     struct task_struct *tsk = m->private;
+    const struct cred *cred = get_task_cred(tsk);
+    struct user_namespace *user_ns = seq_user_ns(m);
+    u64 start_ns = tsk->start_boottime;
+    u64 now_ns = ktime_get_boottime_ns();
+    u64 elapsed_ns = now_ns >= start_ns ? now_ns - start_ns : 0;
+    char state = task_state_to_char(tsk);
 
     if (!tsk)
         return -ESRCH;
 
     get_task_comm(comm, tsk);
-    state = task_state_to_char(tsk);
+    
     seq_printf(m, "[identity]\n");
     seq_printf(m, "pid: %d\n", task_pid_nr(tsk));
     seq_printf(m, "tgid: %d\n", task_tgid_nr(tsk));
-    seq_printf(m, "ppid: %d\n", task_ppid_nr(tsk));
-    seq_printf(m, "pgid: %d\n", task_pgrp_nr(tsk));
-    seq_printf(m, "sid: %d\n", task_session_nr_ns(tsk, &init_pid_ns));
     seq_printf(m, "comm: %s\n", comm);
-    seq_printf(m, "uid:\n");
-    seq_printf(m, "gid:\n");
-    seq_printf(m, "start_time_ns:\n");
+    seq_printf(m, "uid: %d\n", from_kuid_munged(user_ns, cred->uid));
+    seq_printf(m, "gid: %d\n", from_kgid_munged(user_ns, cred->gid));
+    seq_printf(m, "suid: %d\n", from_kuid_munged(user_ns, cred->suid));
+    seq_printf(m, "sgid: %d\n", from_kgid_munged(user_ns, cred->sgid));
+    seq_printf(m, "euid: %d\n", from_kuid_munged(user_ns, cred->euid));
+    seq_printf(m, "egid: %d\n", from_kgid_munged(user_ns, cred->egid));
+    // seq_printf(m, "start_time_ns: %lld\n", tsk->start_time);
+    seq_printf(m, "start_boottime_ns(): %lld\n", tsk->start_boottime);
+    seq_printf(m, "elapsed_ms: %lld\n", div_u64(elapsed_ns, NSEC_PER_MSEC));
 
     seq_printf(m, "\n[state]\n");
     seq_printf(m, "state: %c\n", state);
-    seq_printf(m, "state_name: \n");
-    seq_printf(m, "exit_state:\n");
-    seq_printf(m, "exit_code: \n");
+    seq_printf(m, "state_name: %s\n", task_state_name(state));
+    seq_printf(m, "exit_state: %d\n", tsk->exit_state);
+    seq_printf(m, "exit_code: %d\n", tsk->exit_code);
+    seq_printf(m, "exit_signal: %d\n", tsk->exit_signal);
     seq_printf(m, "threads: %d\n", tsk->signal->nr_threads);
-    seq_printf(m, "on_cpu:\n");
+    seq_printf(m, "on_cpu: %d\n", tsk->on_cpu);
 
     seq_printf(m, "\n[relations]\n");
-    seq_printf(m, "parent_pid: \n");
-    seq_printf(m, "real_parent_pid: \n");
-    seq_printf(m, "group_leader_pid: \n");
-    seq_printf(m, "process_group_id: \n");
-    seq_printf(m, "session_id: \n");
+    seq_printf(m, "parent_pid: %d\n", task_tgid_nr(tsk->parent));
+    seq_printf(m, "real_parent_pid: %d\n", task_ppid_nr(tsk));
+    seq_printf(m, "group_leader_pid: %d\n", task_tgid_nr(tsk->group_leader));
+    seq_printf(m, "process_group_id: %d\n", task_pgrp_nr(tsk));
+    seq_printf(m, "session_id: %d\n", task_session_nr_ns(tsk, &init_pid_ns));
 
     seq_printf(m, "\n[cpu]\n");
     seq_printf(m, "user_time_ms: \n");
     seq_printf(m, "system_time_ms: \n");
     seq_printf(m, "total_time_ms: \n");
-    seq_printf(m, "last_cpu: \n");
+    seq_printf(m, "last_cpu: %d\n", task_cpu(tsk));
     seq_printf(m, "voluntary_context_switches: \n");
     seq_printf(m, "nonvoluntary_context_switches: \n");
 
@@ -131,4 +141,20 @@ static int pi_release(struct inode *inode, struct file *filp)
         put_task_struct(tsk);
 
     return single_release(inode, filp);
+}
+
+static const char *task_state_name(char state)
+{
+    switch (state) {
+    case 'R': return "running";
+    case 'S': return "sleeping";
+    case 'D': return "uninterruptible";
+    case 'T': return "stopped";
+    case 't': return "tracing";
+    case 'X': return "dead";
+    case 'Z': return "zombie";
+    case 'P': return "parked";
+    case 'I': return "idle";
+    default: return "unknown";
+    }
 }
