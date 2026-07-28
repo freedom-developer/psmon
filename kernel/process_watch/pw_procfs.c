@@ -25,7 +25,7 @@ struct proc_dir_entry *create_pw_pid_file(struct proc_dir_entry *parent)
         return NULL;
     }
     
-    struct proc_dir_entry *tmp = proc_create(WATCHED_PID_FILE_NAME, 0644, parent, &watched_pid_ops);
+    struct proc_dir_entry *tmp = proc_create(WATCHED_PID_FILE_NAME, 0666, parent, &watched_pid_ops);
     if (!tmp) {
         pr_err("create_watched_pid_file failed: create %s file failed\n", WATCHED_PID_FILE_NAME);
         return NULL;
@@ -79,7 +79,7 @@ struct proc_dir_entry *create_pw_info_file(struct proc_dir_entry *parent)
 {
     struct proc_dir_entry *tmp;
 
-    tmp = proc_create(PROCESS_INFO_FILE_NAME, 0444, parent, &pi_ops);
+    tmp = proc_create(PROCESS_INFO_FILE_NAME, 0400, parent, &pi_ops);
     if (!tmp) {
         pr_err("create process_info failed\n");
         return NULL;

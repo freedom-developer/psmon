@@ -40,13 +40,12 @@ static int __init psmon_init(void)
 
 static void __exit psmon_exit(void)
 {
+	proc_watch_exit();
 	
 	if (psmon_root) {
 		proc_remove(psmon_root);
 		psmon_root = NULL;
 	}
-
-	proc_watch_exit();
 
 	pr_info("unloaded\n");
 }
