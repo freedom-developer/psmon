@@ -9,8 +9,9 @@
 #include <linux/sched/signal.h>
 #include <linux/workqueue.h>
 
-#include "psmon_internal.h"
+#include "ps_monitor.h"
 
+/*
 struct psmon_stats {
 	size_t processes;
 	size_t threads;
@@ -28,7 +29,7 @@ static void psmon_collect_stats(struct psmon_stats *stats)
 	rcu_read_lock();
 	for_each_process(leader) {
 		stats->processes++;
-		stats->threads++; /* Count the thread-group leader. */
+		stats->threads++; 
 
 		for_each_thread(leader, task)
 			stats->threads++;
@@ -66,4 +67,18 @@ void psmon_monitor_stop(void)
 {
 	WRITE_ONCE(psmon_stopping, true);
 	cancel_delayed_work_sync(&psmon_work);
+}
+
+*/
+
+int ps_monitor_init(struct proc_dir_entry *dir)
+{
+	
+
+	return 0;
+}
+
+void ps_monitor_exit(void)
+{
+
 }

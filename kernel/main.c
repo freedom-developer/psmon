@@ -4,12 +4,15 @@
 #include <linux/init.h>
 #include <linux/module.h>
 
-#include "psmon_internal.h"
+#include "processes_monitor/ps_monitor.h"
 #include "process_watch/pw_internal.h"
 
 // static unsigned int scan_interval_ms = 5000;
 // module_param_named(interval_ms, scan_interval_ms, uint, 0444);
 // MODULE_PARM_DESC(interval_ms, "Process scan interval in milliseconds (minimum 100)");
+
+static struct proc_dir_entry *psmon_root = NULL;
+#define PSMON_DIR_NAME "psmon"
 
 static int __init psmon_init(void);
 static void __exit psmon_exit(void);
@@ -34,12 +37,20 @@ static int __init psmon_init(void)
 		return err;
 	}
 
+	err = ps_monitor_init(psmon_root);
+	if (err) {
+		psmon_exit();
+		return err;
+	}
+
 	pr_info("loaded\n");
 	return 0;
 }
 
 static void __exit psmon_exit(void)
 {
+	ps_monitor_exit();
+	
 	proc_watch_exit();
 	
 	if (psmon_root) {
