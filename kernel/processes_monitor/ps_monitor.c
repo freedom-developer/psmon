@@ -73,7 +73,6 @@ void psmon_monitor_stop(void)
 
 int ps_monitor_init(struct proc_dir_entry *dir)
 {
-	
 
 	return 0;
 }
