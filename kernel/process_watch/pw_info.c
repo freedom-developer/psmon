@@ -316,7 +316,7 @@ static int collect_process_io(struct task_struct *tsk, struct task_io_accounting
     // unsigned long flags;
     // if (!lock_task_sighand(tsk, &flags))
     //     return -ESRCH;
-
+    
     spin_lock_irq(&tsk->sighand->siglock);
 
     task_io_accounting_add(result, &tsk->signal->ioac); // 已退出线程的IO统计
