@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
+#include "processes.h"
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/compiler.h>
@@ -73,11 +74,18 @@ void psmon_monitor_stop(void)
 
 int ps_monitor_init(struct proc_dir_entry *dir)
 {
+	int err;
+
+	err = create_processes_file(dir);
+	if (err) {
+		ps_monitor_exit();
+		return err;
+	}
 
 	return 0;
 }
 
 void ps_monitor_exit(void)
 {
-
+	destroy_processes_file();
 }
