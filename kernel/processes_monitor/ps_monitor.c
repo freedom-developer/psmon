@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
+#include "ps_monitor.h"
 #include "processes.h"
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 

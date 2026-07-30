@@ -5,7 +5,9 @@ psmon-y := \
 	main.o \
 	process_watch/proc_watch.o \
 	process_watch/pw_procfs.o \
-	process_watch/pw_info.o
+	process_watch/pw_info.o \
+	processes_monitor/ps_monitor.o \
+	processes_monitor/processes.o
 
 else
 
