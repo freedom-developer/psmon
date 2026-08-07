@@ -2,6 +2,7 @@
 
 #include <linux/fs.h>
 #include <linux/cdev.h>
+#include <linux/kfifo.h>
 
 #define DEVBASE 0
 #define DEVCOUNT 1
@@ -12,11 +13,12 @@
 dev_t dev_no;
 
 struct psm_char_dev {
+    // DECLARE_KFIFO_PTR()
     struct cdev dev;
 };
 
 struct file_operations psm_cdev_ops = {
-
+    .owner = THIS_MODULE,
 };
 
 struct psm_char_dev psmon_dev;
@@ -41,12 +43,12 @@ int ps_chrdev_init(void)
 
     // 创建设备文件
     psm_class = class_create(PSMCLASS);
-    if (!psm_class) {
+    if (IS_ERR(psm_class)) {
         ps_chrdev_exit();
         return -EINVAL;
     }
-    psm_device = device_create(psm_class, NULL, dev_no, NULL, "char_device");
-    if (!psm_device) {
+    psm_device = device_create(psm_class, NULL, dev_no, NULL, DEVNAME);
+    if (IS_ERR(psm_device)) {
         ps_chrdev_exit();
         return -EINVAL;
     }
